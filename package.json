@@ -1,0 +1,16 @@
+{
+  "name": "test-monorepo",
+  "version": "1.0.0",
+  "description": "Root for frontend and backend",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
