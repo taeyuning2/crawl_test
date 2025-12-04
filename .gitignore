@@ -1,0 +1,10 @@
+node_modules
+package-lock.json
+
+.env
+debug_output.txt
+tsconfig.app.json
+tsconfig.node.json
+
+backend/dist/
+frontend/dist/
