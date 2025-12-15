@@ -11,7 +11,14 @@ const allowedOrigins =
     'http://localhost:5173,http://localhost:3000,https://crawl-test.vercel.app'
   )
     .split(',')
-    .map(origin => origin.trim())
+  .map(origin => origin.trim())
+  .filter(Boolean);
+
+// allow preview URLs like https://<branch>-<team>.vercel.app
+const allowedOriginSuffixes =
+  (process.env.ALLOWED_ORIGIN_SUFFIXES || '.vercel.app')
+    .split(',')
+    .map(suffix => suffix.trim())
     .filter(Boolean);
 
 app.use(
@@ -19,7 +26,10 @@ app.use(
     origin: (origin, callback) => {
       // allow tools like curl/postman with no origin
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
+      const isAllowed =
+        allowedOrigins.includes(origin) ||
+        allowedOriginSuffixes.some(suffix => origin.endsWith(suffix));
+      if (isAllowed) {
         return callback(null, true);
       }
       return callback(new Error('Not allowed by CORS'));
