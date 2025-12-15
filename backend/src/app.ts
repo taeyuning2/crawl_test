@@ -3,10 +3,30 @@ import express, { Request, Response } from 'express';
 import crawlRoutes from './routes/crawl';
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 
-// CORS 미들웨어 추가
-app.use(cors());
+const allowedOrigins =
+  (
+    process.env.ALLOWED_ORIGINS ||
+    'http://localhost:5173,http://localhost:3000,https://crawl-test.vercel.app'
+  )
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // allow tools like curl/postman with no origin
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+  }),
+);
 
 // JSON 요청 본문을 파싱하기 위한 미들웨어
 app.use(express.json());
