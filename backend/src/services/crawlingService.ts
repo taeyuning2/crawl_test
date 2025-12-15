@@ -32,6 +32,9 @@ interface ProductData {
   originalPrice: string | null;
   salePrice: string | null;
   imageUrl: string | null;
+  mainImages: string[];
+  description: string | null;
+  url: string;
   details: ProductDetail[];
 }
 
@@ -86,8 +89,13 @@ export const fetchProductData = async (url: string): Promise<ProductData> => {
     const ogImage = $('meta[property="og:image"]').attr('content');
     const ogDescription = $('meta[property="og:description"]').attr('content');
 
-    // 메인 상품 이미지 (상대경로 포함 정규화)
-    let mainImageSrc = toAbsoluteUrl($('.product__media img').attr('src'), url);
+    // 메인 상품 이미지들 (캐러셀 모두 수집)
+    const mainImages = $('.product__media img')
+      .map((_i, el) => toAbsoluteUrl($(el).attr('src'), url))
+      .get()
+      .filter((src): src is string => Boolean(src));
+    const uniqueMainImages = Array.from(new Set(mainImages));
+    let mainImageSrc = uniqueMainImages[0] || toAbsoluteUrl($('.product__media img').attr('src'), url);
 
     // 가격 텍스트 원본 추출
     const salePriceText = $('.price-item--sale').first().text().trim();
@@ -200,7 +208,20 @@ Return only a JSON array of strings, e.g. ["Line 1", "Line 2"]. If there is no t
       }
     }
 
-    return { name, brand, price, originalPrice, salePrice, imageUrl, details };
+    const description = ogDescription || details.find(d => d.text)?.text || null;
+
+    return {
+      name,
+      brand,
+      price,
+      originalPrice,
+      salePrice,
+      imageUrl,
+      mainImages: uniqueMainImages,
+      description,
+      url,
+      details,
+    };
   } catch (error) {
     console.error(`데이터를 가져오는 중 오류 발생 '${url}':`, error);
     throw new Error('HTML을 가져오거나 파싱하는 데 실패했습니다.');

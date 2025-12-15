@@ -15,12 +15,16 @@ type FormState = {
   ratio: string;
   cta: string;
   keyPoints: string;
+  price: string;
+  description: string;
 };
 
 const defaultFormState: FormState = {
   productUrl: '',
   productName: '',
   brand: '',
+  price: '',
+  description: '',
   target: '20-30 female',
   tone: 'Modern · Clean · Minimal',
   length: '15s',
@@ -39,6 +43,12 @@ const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({ crawledData
     productUrl: crawledData?.url ?? defaultFormState.productUrl,
     productName: crawledData?.title ?? defaultFormState.productName,
     brand: crawledData?.brand ?? defaultFormState.brand,
+    price:
+      (crawledData as any)?.salePrice ||
+      (crawledData as any)?.price ||
+      (crawledData as any)?.originalPrice ||
+      defaultFormState.price,
+    description: crawledData?.description ?? defaultFormState.description,
     keyPoints: crawledData?.description ? `${crawledData.description.slice(0, 200)}...` : defaultFormState.keyPoints,
     cta: crawledData ? 'Shop now via the link below' : defaultFormState.cta,
   }), [crawledData]);
@@ -143,6 +153,17 @@ const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({ crawledData
                     </div>
 
                     <div>
+                      <label className="block text-xs text-gray-400 mb-1">Price</label>
+                      <input
+                        type="text"
+                        name="price"
+                        value={formData.price}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-900/80 border border-gray-600 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                      />
+                    </div>
+
+                    <div>
                       <label className="block text-xs text-gray-400 mb-1">Target audience</label>
                       <input
                         type="text"
@@ -213,6 +234,17 @@ const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({ crawledData
                         value={formData.keyPoints}
                         onChange={handleInputChange}
                         rows={4}
+                        className="w-full bg-gray-900/80 border border-gray-600 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all resize-none"
+                      />
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-xs text-gray-400 mb-1">Description</label>
+                      <textarea
+                        name="description"
+                        value={formData.description}
+                        onChange={handleInputChange}
+                        rows={3}
                         className="w-full bg-gray-900/80 border border-gray-600 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all resize-none"
                       />
                     </div>
