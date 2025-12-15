@@ -17,8 +17,11 @@ const CrawlForm = <TData extends CrawledData = CrawledData>({ onDataCrawled }: C
     setLoading(true);
     setCrawledData(null);
 
+    const apiBase =
+      import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:3000';
+
     try {
-      const response = await fetch('http://localhost:3000/api/crawl', {
+      const response = await fetch(`${apiBase}/api/crawl`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
