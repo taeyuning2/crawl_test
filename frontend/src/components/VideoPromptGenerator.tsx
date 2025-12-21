@@ -97,6 +97,7 @@ const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({ crawledData
       [baseKey]: {
         ...(prev[baseKey] ?? {}),
         [name]: value,
+        ...(name === 'videoType' && value === 'E' ? { scriptStyle: '6' } : {}),
       },
     }));
   };
@@ -128,6 +129,9 @@ const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({ crawledData
       formData.keyPoints || formData.description || '',
       `Video type: ${formData.videoType} (${videoTypeGuide[formData.videoType]})`,
       `Script style: ${formData.scriptStyle} (${scriptStyleGuide[formData.scriptStyle]})`,
+      formData.videoType === 'E'
+        ? 'E타입 규칙: 단일 장면, AI 안내자 하단 작은 배치, 감성/과장 금지, 오퍼-행동 유도형만 사용, 조건은 A(혜택 요약)->I(금액/혜택/코드/기간 정렬)->조건 3개 이상이면 Step 분리->Desire 1문장(즉각성 가볍게)->Action 1문장 CTA. 모호한 표현 금지.'
+        : '',
       `Tone: ${formData.tone}`,
       `CTA: ${formData.cta}`,
       `Duration: ${formData.length}`,
@@ -361,6 +365,7 @@ const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({ crawledData
                         name="scriptStyle"
                         value={formData.scriptStyle}
                         onChange={handleInputChange}
+                        disabled={formData.videoType === 'E'}
                         className="w-full bg-gray-900/80 border border-gray-600 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-gray-300"
                       >
                         <option value="1">1) USP 원라이너형</option>
@@ -370,7 +375,11 @@ const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({ crawledData
                         <option value="5">5) 아이덴티티-무드형</option>
                         <option value="6">6) 오퍼-행동 유도형</option>
                       </select>
-                      <p className="text-[11px] text-gray-500 mt-1">{scriptStyleGuide[formData.scriptStyle]}</p>
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        {formData.videoType === 'E'
+                          ? 'E타입은 6) 오퍼-행동 유도형만 사용합니다.'
+                          : scriptStyleGuide[formData.scriptStyle]}
+                      </p>
                     </div>
                   </div>
 
