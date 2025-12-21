@@ -1,6 +1,7 @@
 import cors from 'cors';
 import express, { Request, Response } from 'express';
 import crawlRoutes from './routes/crawl';
+import videoRoutes from './routes/video';
 
 const app = express();
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
@@ -48,6 +49,7 @@ app.get('/', (req: Request, res: Response) => {
 
 // 크롤링 라우트 추가
 app.use('/api', crawlRoutes);
+app.use('/api/video', videoRoutes);
 
 app.listen(port, () => {
   console.log(`서버가 http://localhost:${port} 에서 실행 중입니다.`);

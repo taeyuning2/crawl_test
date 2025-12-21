@@ -16,4 +16,5 @@ export type CrawledData = {
     detailTitle?: string | null;
     detailSub?: string | null;
   }>;
+  referenceImage?: string;
 } & Record<string, unknown>;

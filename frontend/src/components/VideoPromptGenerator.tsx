@@ -3,6 +3,7 @@ import type { CrawledData } from '../types/crawl';
 
 interface VideoPromptGeneratorProps {
   crawledData: CrawledData | null;
+  referenceImage?: string;
 }
 
 type FormState = {
@@ -17,6 +18,9 @@ type FormState = {
   keyPoints: string;
   price: string;
   description: string;
+  videoType: 'A' | 'B' | 'C' | 'D' | 'E';
+  scriptStyle: '1' | '2' | '3' | '4' | '5' | '6';
+  referenceImage: string;
 };
 
 const defaultFormState: FormState = {
@@ -31,11 +35,34 @@ const defaultFormState: FormState = {
   ratio: '9:16 (vertical)',
   cta: 'Shop now',
   keyPoints: '',
+  videoType: 'A',
+  scriptStyle: '1',
+  referenceImage: '',
 };
 
-const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({ crawledData }) => {
+const videoTypeGuide: Record<FormState['videoType'], string> = {
+  A: 'A타입｜키 비주얼 강조형 (3초 내 주목, 메시지 한 줄)',
+  B: 'B타입｜효능 서사형 (AIDA 균형)',
+  C: 'C타입｜제품 핵심 설명형 (정보 전달 중심)',
+  D: 'D타입｜AI 가이드 설명형 (신뢰/현실감)',
+  E: 'E타입｜프로모션 조건 설명형 (혜택·조건 명확히)',
+};
+
+const scriptStyleGuide: Record<FormState['scriptStyle'], string> = {
+  '1': 'USP 원라이너형: 차별점 한 줄 + 근거',
+  '2': '기능-근거 스택형: Feature→Benefit 2~3줄 + CTA',
+  '3': '문제-해결 전환형(PAS): 문제-공감-해결-CTA',
+  '4': '신뢰-검증형: 수치/테스트 근거 2문장 + Benefit + CTA',
+  '5': '아이덴티티-무드형: 감성/무드 3문장, 기능 1문장',
+  '6': '오퍼-행동 유도형: 혜택→조건→추가혜택→CTA',
+};
+
+const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({ crawledData, referenceImage }) => {
   const [step, setStep] = useState<'briefing' | 'result'>('briefing');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [videoStatus, setVideoStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [videoOutput, setVideoOutput] = useState<Record<string, unknown> | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
   const baseKey = crawledData?.url ?? 'default';
 
   const baseForm = useMemo<FormState>(() => ({
@@ -51,7 +78,10 @@ const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({ crawledData
     description: crawledData?.description ?? defaultFormState.description,
     keyPoints: crawledData?.description ? `${crawledData.description.slice(0, 200)}...` : defaultFormState.keyPoints,
     cta: crawledData ? 'Shop now via the link below' : defaultFormState.cta,
-  }), [crawledData]);
+    videoType: defaultFormState.videoType,
+    scriptStyle: defaultFormState.scriptStyle,
+    referenceImage: referenceImage || (crawledData as any)?.referenceImage || (crawledData as any)?.imageUrl || defaultFormState.referenceImage,
+  }), [crawledData, referenceImage]);
 
   const [overridesByKey, setOverridesByKey] = useState<Record<string, Partial<FormState>>>({});
 
@@ -85,6 +115,52 @@ const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({ crawledData
       ...prev,
       [baseKey]: {},
     }));
+  };
+
+  const handleGenerateVideo = async () => {
+    const apiBase =
+      import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:3000';
+    const durationSec = parseInt(formData.length, 10) || 10;
+    const aspectRatio = formData.ratio.split(' ')[0];
+    const prompt = [
+      `${formData.brand} ${formData.productName}`.trim(),
+      formData.price ? `Price: ${formData.price}` : '',
+      formData.keyPoints || formData.description || '',
+      `Video type: ${formData.videoType} (${videoTypeGuide[formData.videoType]})`,
+      `Script style: ${formData.scriptStyle} (${scriptStyleGuide[formData.scriptStyle]})`,
+      `Tone: ${formData.tone}`,
+      `CTA: ${formData.cta}`,
+      `Duration: ${formData.length}`,
+      `Aspect: ${formData.ratio}`,
+      formData.referenceImage ? `Reference image: ${formData.referenceImage}` : '',
+      formData.productUrl ? `Link: ${formData.productUrl}` : '',
+    ]
+      .filter(Boolean)
+      .join(' | ');
+
+    try {
+      setVideoStatus('loading');
+      setVideoError(null);
+      setVideoOutput(null);
+
+      const res = await fetch(`${apiBase}/api/video`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, durationSec, aspectRatio }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Video API failed (${res.status})`);
+      }
+
+      const data = (await res.json()) as Record<string, unknown>;
+      setVideoOutput(data);
+      setVideoStatus('done');
+    } catch (err) {
+      setVideoStatus('error');
+      setVideoError(err instanceof Error ? err.message : '영상 생성 요청 실패');
+    }
   };
 
   return (
@@ -248,6 +324,54 @@ const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({ crawledData
                         className="w-full bg-gray-900/80 border border-gray-600 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all resize-none"
                       />
                     </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-xs text-gray-400 mb-1">Reference image URL (click a thumbnail on the left)</label>
+                      <input
+                        type="text"
+                        name="referenceImage"
+                        value={formData.referenceImage}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-900/80 border border-gray-600 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                        placeholder="https://..."
+                      />
+                      <p className="text-[11px] text-gray-500 mt-1">썸네일을 클릭하면 자동으로 채워집니다.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Video type</label>
+                      <select
+                        name="videoType"
+                        value={formData.videoType}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-900/80 border border-gray-600 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-gray-300"
+                      >
+                        <option value="A">A타입｜키 비주얼 강조</option>
+                        <option value="B">B타입｜효능 서사형</option>
+                        <option value="C">C타입｜제품 핵심 설명</option>
+                        <option value="D">D타입｜AI 가이드 설명</option>
+                        <option value="E">E타입｜프로모션 설명</option>
+                      </select>
+                      <p className="text-[11px] text-gray-500 mt-1">{videoTypeGuide[formData.videoType]}</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Script style</label>
+                      <select
+                        name="scriptStyle"
+                        value={formData.scriptStyle}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-900/80 border border-gray-600 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-gray-300"
+                      >
+                        <option value="1">1) USP 원라이너형</option>
+                        <option value="2">2) 기능-근거 스택형</option>
+                        <option value="3">3) 문제-해결 전환형 (PAS)</option>
+                        <option value="4">4) 신뢰-검증형</option>
+                        <option value="5">5) 아이덴티티-무드형</option>
+                        <option value="6">6) 오퍼-행동 유도형</option>
+                      </select>
+                      <p className="text-[11px] text-gray-500 mt-1">{scriptStyleGuide[formData.scriptStyle]}</p>
+                    </div>
                   </div>
 
                   <div className="pt-4 flex items-center gap-3">
@@ -368,6 +492,71 @@ const VideoPromptGenerator: React.FC<VideoPromptGeneratorProps> = ({ crawledData
                 <p>
                   <span className="text-emerald-400">[CTA]</span> {formData.cta} · {formData.productUrl}
                 </p>
+              </div>
+            </div>
+
+            <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 backdrop-blur-sm animate-fade-in">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-lg font-semibold flex items-center gap-2">Video generation (Veo)</h3>
+                <button
+                  onClick={() => setStep('briefing')}
+                  className="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-gray-300 transition-colors"
+                >
+                  Edit briefing
+                </button>
+              </div>
+              <p className="text-sm text-gray-400 mb-4">
+                아래 프롬프트로 Veo API를 호출해 영상을 생성합니다. (유료 모델이므로 호출 시 과금될 수 있습니다.)
+              </p>
+              <div className="space-y-3">
+                <div className="text-xs bg-gray-900/60 border border-gray-700 rounded-lg p-3 text-gray-100">
+                  {[
+                    `${formData.brand} ${formData.productName}`.trim(),
+                    formData.price ? `Price: ${formData.price}` : '',
+                    formData.keyPoints || formData.description || '',
+                    `Tone: ${formData.tone}`,
+                    `CTA: ${formData.cta}`,
+                    `Duration: ${formData.length}`,
+                    `Aspect: ${formData.ratio}`,
+                    formData.productUrl ? `Link: ${formData.productUrl}` : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' | ')}
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleGenerateVideo}
+                    disabled={videoStatus === 'loading'}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-60"
+                  >
+                    {videoStatus === 'loading' ? 'Generating...' : 'Generate video'}
+                  </button>
+                  <span className="text-xs text-gray-400">
+                    상태: {videoStatus === 'idle' ? '대기' : videoStatus === 'loading' ? '생성 중' : videoStatus === 'done' ? '완료' : '오류'}
+                  </span>
+                </div>
+                {videoError && (
+                  <div className="text-xs text-red-400 bg-red-900/30 border border-red-800 rounded p-2">{videoError}</div>
+                )}
+                {videoOutput && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-gray-200">Veo 응답</h4>
+                    {'videoUrl' in videoOutput && typeof videoOutput.videoUrl === 'string' ? (
+                      <a
+                        href={videoOutput.videoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-emerald-400 underline text-sm"
+                      >
+                        영상 보기
+                      </a>
+                    ) : (
+                      <pre className="text-xs text-emerald-400 bg-gray-900/60 border border-gray-700 rounded-lg p-3 overflow-auto">
+                        {JSON.stringify(videoOutput, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

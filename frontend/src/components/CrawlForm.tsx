@@ -3,9 +3,10 @@ import type { CrawledData } from '../types/crawl';
 
 interface CrawlFormProps<TData> {
   onDataCrawled: (data: TData) => void;
+  onImageSelect?: (url: string) => void;
 }
 
-const CrawlForm = <TData extends CrawledData = CrawledData>({ onDataCrawled }: CrawlFormProps<TData>) => {
+const CrawlForm = <TData extends CrawledData = CrawledData>({ onDataCrawled, onImageSelect }: CrawlFormProps<TData>) => {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,24 +141,38 @@ const CrawlForm = <TData extends CrawledData = CrawledData>({ onDataCrawled }: C
                 <h4 className="text-sm text-gray-300 font-semibold">이미지 미리보기</h4>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {mainImages.map((src, idx) => (
-                    <div key={src || idx} className="bg-gray-900/60 border border-gray-700 rounded-lg overflow-hidden">
+                    <button
+                      key={src || idx}
+                      type="button"
+                      onClick={() => onImageSelect?.(src as string)}
+                      className="bg-gray-900/60 border border-gray-700 rounded-lg overflow-hidden text-left hover:border-emerald-500 transition-colors"
+                    >
                       <img src={src as string} alt={`main-${idx + 1}`} className="w-full h-32 object-cover" />
                       <div className="text-xs text-gray-400 px-2 py-1 border-t border-gray-800">
-                        대표 {idx + 1}
+                        대표 {idx + 1} (클릭해 브리프에 추가)
                       </div>
-                    </div>
+                    </button>
                   ))}
                   {!mainImages.length && mainImage && (
-                    <div className="bg-gray-900/60 border border-gray-700 rounded-lg overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => onImageSelect?.(mainImage)}
+                      className="bg-gray-900/60 border border-gray-700 rounded-lg overflow-hidden text-left hover:border-emerald-500 transition-colors"
+                    >
                       <img src={mainImage} alt="main" className="w-full h-32 object-cover" />
-                      <div className="text-xs text-gray-400 px-2 py-1 border-t border-gray-800">대표 이미지</div>
-                    </div>
+                      <div className="text-xs text-gray-400 px-2 py-1 border-t border-gray-800">대표 이미지 (클릭해 브리프에 추가)</div>
+                    </button>
                   )}
                   {detailImages.map((src, idx) => (
-                    <div key={src || idx} className="bg-gray-900/60 border border-gray-700 rounded-lg overflow-hidden">
+                    <button
+                      key={src || idx}
+                      type="button"
+                      onClick={() => onImageSelect?.(src as string)}
+                      className="bg-gray-900/60 border border-gray-700 rounded-lg overflow-hidden text-left hover:border-emerald-500 transition-colors"
+                    >
                       <img src={src as string} alt={`detail-${idx + 1}`} className="w-full h-32 object-cover" />
-                      <div className="text-xs text-gray-400 px-2 py-1 border-t border-gray-800">상세 {idx + 1}</div>
-                    </div>
+                      <div className="text-xs text-gray-400 px-2 py-1 border-t border-gray-800">상세 {idx + 1} (클릭해 브리프에 추가)</div>
+                    </button>
                   ))}
                 </div>
               </div>

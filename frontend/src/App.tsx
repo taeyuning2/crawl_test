@@ -6,6 +6,7 @@ import type { CrawledData } from './types/crawl';
 
 function App() {
   const [data, setData] = useState<CrawledData | null>(null);
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
@@ -22,12 +23,15 @@ function App() {
 
           {/* Left Column: Crawl Form */}
           <div className="basis-1/3">
-            <CrawlForm<CrawledData> onDataCrawled={setData} />
+            <CrawlForm<CrawledData>
+              onDataCrawled={setData}
+              onImageSelect={(url) => setReferenceImage(url)}
+            />
           </div>
 
           {/* Right Column: Video Prompt Generator */}
           <div className="basis-2/3">
-            <VideoPromptGenerator crawledData={data} />
+            <VideoPromptGenerator crawledData={data} referenceImage={referenceImage ?? undefined} />
           </div>
 
         </div>
